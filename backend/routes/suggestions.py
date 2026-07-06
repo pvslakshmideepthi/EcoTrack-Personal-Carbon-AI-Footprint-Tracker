@@ -1,16 +1,60 @@
 import os
 import json
+import re
 from flask import Blueprint, request, jsonify
 from groq import Groq
+from local_db import save_recommendations
 
 suggestions_bp = Blueprint('suggestions', __name__)
 
-# Initialize Groq Client securely using environment variables
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+def fallback_suggestions(data):
+    travel = float(data.get('travel_emissions') or 0)
+    food = float(data.get('food_emissions') or 0)
+    energy = float(data.get('energy_emissions') or 0)
+    highest = max(
+        [('travel', travel), ('food', food), ('energy', energy)],
+        key=lambda item: item[1],
+    )[0]
+    return [
+        {
+            "title": "Target the highest footprint category",
+            "description": f"Your largest current source is {highest}. Start with one specific swap there before changing lower-impact habits.",
+            "category": highest,
+            "estimated_co2_saving": "0.5-2.5 kg CO2e/day",
+        },
+        {
+            "title": "Plan a low-carbon default",
+            "description": "Choose public transport, plant-forward meals, and efficient appliance use on routine days to lower emissions without extra planning.",
+            "category": "lifestyle",
+            "estimated_co2_saving": "1.0 kg CO2e/day",
+        },
+        {
+            "title": "Keep a visible daily budget",
+            "description": "Compare every new log with your personal budget and use high-footprint days as triggers for the next-day reduction plan.",
+            "category": "budget",
+            "estimated_co2_saving": "measurable weekly reduction",
+        },
+    ]
+
+def parse_json_array(content):
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        match = re.search(r'\[[\s\S]*\]', content or '')
+        if match:
+            return json.loads(match.group(0))
+        raise
 
 @suggestions_bp.route('/api/suggestions/generate', methods=['POST'])
 def generate_suggestions():
-    data = request.json
+    data = request.json or {}
+    api_key = os.environ.get("GROQ_API_KEY")
+
+    if not api_key:
+        suggestions = fallback_suggestions(data)
+        if data.get("user_id"):
+            save_recommendations(data.get("user_id"), data.get("total"), suggestions)
+        return jsonify(suggestions)
     
     # Construct context prompt
     prompt = f"""
@@ -25,6 +69,7 @@ def generate_suggestions():
     """
 
     try:
+        client = Groq(api_key=api_key)
         # Submit request to Groq API
         chat_completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
@@ -34,16 +79,17 @@ def generate_suggestions():
         )
         
         # Parse returned JSON array
-        suggestions_json = chat_completion.choices.message.content
-        suggestions = json.loads(suggestions_json)
+        suggestions_json = chat_completion.choices[0].message.content
+        suggestions = parse_json_array(suggestions_json)
+
+        if data.get("user_id"):
+            save_recommendations(data.get("user_id"), data.get("total"), suggestions)
         
         return jsonify(suggestions)
         
     except Exception as e:
         # Serve static fallback if API is unavailable
-        fallback_suggestions = [
-            {"title": "Use public transport", "description": "Taking the bus reduces emissions.", "category": "travel", "estimated_co2_saving": "2.4 kg"},
-            {"title": "Eat plant-based", "description": "Reduce meat intake.", "category": "food", "estimated_co2_saving": "1.5 kg"},
-            {"title": "Unplug devices", "description": "Turn off switches when not in use.", "category": "energy", "estimated_co2_saving": "0.3 kg"}
-        ]
-        return jsonify(fallback_suggestions)
+        suggestions = fallback_suggestions(data)
+        if data.get("user_id"):
+            save_recommendations(data.get("user_id"), data.get("total"), suggestions)
+        return jsonify(suggestions)

@@ -24,26 +24,45 @@ AC_FLAT_RATE = 1.5 # kg
 
 @calculator_bp.route('/api/calculate/footprint', methods=['POST'])
 def calculate_footprint():
-    data = request.json
+    data = request.json or {}
+
+    def parse_non_negative_number(field_name):
+        try:
+            value = float(data.get(field_name, 0))
+        except (TypeError, ValueError):
+            raise ValueError(f"{field_name} must be a valid number")
+        if value < 0:
+            raise ValueError(f"{field_name} must be non-negative")
+        return value
     
     # 1. Travel Emissions
     transport_mode = data.get('transport_mode')
-    distance = float(data.get('distance', 0))
-    # Distance must be a non-negative number
-    if distance < 0:
-        return jsonify({"error": "Distance must be non-negative"}), 400
+    if transport_mode not in TRANSPORT_COEFFICIENTS:
+        return jsonify({"error": "Unknown transport mode"}), 400
+
+    try:
+        distance = parse_non_negative_number('distance')
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
         
     travel_emissions = TRANSPORT_COEFFICIENTS.get(transport_mode, 0) * distance
 
     # 2. Food Emissions
     diet_type = data.get('diet_type')
+    if diet_type not in FOOD_COEFFICIENTS:
+        return jsonify({"error": "Unknown diet type"}), 400
+
     food_emissions = FOOD_COEFFICIENTS.get(diet_type, 0)
     # Applies a 10% emission penalty for food waste
     if data.get('food_waste') == True:
         food_emissions *= 1.10
 
     # 3. Energy Emissions
-    electricity_kwh = float(data.get('electricity_kwh', 0))
+    try:
+        electricity_kwh = parse_non_negative_number('electricity_kwh')
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
     energy_emissions = electricity_kwh * ELECTRICITY_FACTOR
     
     if data.get('heating'):
@@ -60,5 +79,13 @@ def calculate_footprint():
         "food_emissions": round(food_emissions, 2),
         "energy_emissions": round(energy_emissions, 2),
         "total": round(total_emissions, 2),
+        "calculation_method": "coefficient-based kg CO2e estimate",
+        "factors": {
+            "transport_kg_per_km": TRANSPORT_COEFFICIENTS[transport_mode],
+            "food_kg_per_day": FOOD_COEFFICIENTS[diet_type],
+            "electricity_kg_per_kwh": ELECTRICITY_FACTOR,
+            "heating_flat_kg": HEATING_FLAT_RATE if data.get('heating') else 0,
+            "ac_flat_kg": AC_FLAT_RATE if data.get('ac') else 0
+        },
         "breakdown": data
     })

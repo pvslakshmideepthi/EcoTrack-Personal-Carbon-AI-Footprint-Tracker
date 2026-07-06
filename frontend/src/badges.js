@@ -20,8 +20,8 @@ export const evaluateBadges = (history, currentLog, existingBadges = []) => {
   // 4. Pedal Power: Log bicycle or walking as transport
   checkAndAward('pedal_power', 'Pedal Power', ['Bicycle', 'Walking'].includes(currentLog.transport_mode));
 
-  // 5. Green Day: Stay under daily budget
-  checkAndAward('green_day', 'Green Day', currentLog.total <= 8.0); // Assuming default 8kg budget
+  // 5. Budget Clear: Stay under daily budget
+  checkAndAward('budget_clear', 'Budget Clear', currentLog.total <= 8.0);
 
   // 6. Zero Waster: No food waste reported
   checkAndAward('zero_waster', 'Zero Waster', currentLog.food_waste === false);

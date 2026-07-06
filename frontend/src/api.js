@@ -10,7 +10,18 @@ const apiClient = axios.create({
   },
 });
 
+export const setApiAuthToken = (token) => {
+  if (token) {
+    apiClient.defaults.headers.common.Authorization = `Bearer ${token}`;
+  } else {
+    delete apiClient.defaults.headers.common.Authorization;
+  }
+};
+
 export const api = {
+  // Saves/updates user profile in the backend database
+  upsertUser: (data) => apiClient.post('/api/users/upsert', data),
+
   // Calculates footprint breakdown
   calculateFootprint: (data) => apiClient.post('/api/calculate/footprint', data),
   
