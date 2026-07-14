@@ -1,0 +1,8 @@
+EcoTrack run steps are documented in README.md.
+
+Quick start:
+1. Enable Firebase Email/Password Authentication and create a Firestore database.
+2. Add Firebase web keys to frontend\.env and Firebase Admin service account to backend\serviceAccountKey.json.
+3. Start backend: cd backend && python -m venv .venv && .venv\Scripts\activate && pip install -r requirements.txt && python app.py
+4. Start frontend: cd frontend && npm install && npm run dev
+5. Open http://localhost:5173 and register/login.
