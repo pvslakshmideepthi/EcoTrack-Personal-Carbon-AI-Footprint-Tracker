@@ -1,6 +1,0 @@
-flask
-flask-cors
-firebase-admin
-groq
-requests
-python-dotenv
