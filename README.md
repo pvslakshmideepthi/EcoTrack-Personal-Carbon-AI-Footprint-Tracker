@@ -1,77 +1,91 @@
 # EcoTrack Personal Carbon AI Footprint Tracker
 
-EcoTrack is a full-stack sustainability app for logging daily travel, food, and energy habits, estimating carbon emissions, tracking a personal daily budget, earning badges, and generating AI-powered reduction recommendations.
+EcoTrack is a full-stack realtime sustainability platform built with React, Flask, Firebase Authentication, Firestore realtime listeners, Chart.js analytics, Carbon Interface API hooks, and Groq LLaMA 3.3 70B recommendations.
 
-## Project Structure
+## Features
 
-```text
-EcoTrack-Personal-Carbon-AI-Footprint-Tracker/
-+-- Documentation/
-|   +-- README.md
-|   +-- SETUP.md
-|   +-- ARCHITECTURE.md
-|   +-- API_REFERENCE.md
-|   +-- FIREBASE.md
-|   +-- DEPLOYMENT.md
-|   +-- TROUBLESHOOTING.md
-+-- Demo Video/
-+-- Project Files/
-|   +-- backend/
-|   +-- frontend/
-|   +-- firestore.rules
-+-- README.md
-```
+- Daily travel, food, and energy habit logger
+- Carbon footprint calculator with category breakdowns
+- Personal daily carbon budget tracker
+- Trend, stacked category, doughnut, and radar analytics
+- AI eco-friendly recommendation engine with Groq fallback mode
+- Badge and achievement system
+- Firebase Email/Password Authentication and Firestore realtime persistence
+- Responsive professional dashboard UI with a blue and purple product theme
 
-## Main Features
+## Folder To Run
 
-- Carbon footprint calculator for transport, diet, food waste, electricity, heating, and air conditioning.
-- Daily habit logging with 30-day history.
-- Personal carbon budget tracking.
-- Dashboard analytics with line, bar, doughnut, and radar charts.
-- AI suggestions through Groq LLaMA 3.3 70B, with local fallback suggestions.
-- Firebase Authentication and Firestore sync when configured.
-- SQLite fallback storage for local backend persistence.
-- In-app local storage fallback for frontend-only usage.
-- Badge and achievement system.
-
-## Quick Start
-
-Run the backend:
+Run all commands from:
 
 ```bash
-cd "Project Files/backend"
+C:\mycoding\EcoTrack-Personal-Carbon-AI-Footprint-Tracker\EcoTrack-Personal-Carbon-AI-Footprint-Tracker
+```
+
+## Backend Setup
+
+```bash
+cd backend
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+copy .env.example .env
 python app.py
 ```
 
-Run the frontend in a second terminal:
+The Flask API runs at `http://localhost:5000`.
+
+For production cloud storage, place your Firebase Admin SDK file at `backend/serviceAccountKey.json`. The backend writes user logs, settings, and badges to Firestore.
+
+## Frontend Setup
+
+Open a second terminal:
 
 ```bash
-cd "Project Files/frontend"
+cd frontend
 npm install
+copy .env.example .env
 npm run dev
 ```
 
-Open `http://localhost:5173`.
+The React app runs at `http://localhost:5173`.
 
-## Documentation
+## API Keys
 
-- [Documentation overview](Documentation/README.md)
-- [Setup guide](Documentation/SETUP.md)
-- [Architecture](Documentation/ARCHITECTURE.md)
-- [API reference](Documentation/API_REFERENCE.md)
-- [Firebase setup and rules](Documentation/FIREBASE.md)
-- [Deployment guide](Documentation/DEPLOYMENT.md)
-- [Troubleshooting](Documentation/TROUBLESHOOTING.md)
+Add these values before production deployment:
 
-## Required Services For Full Cloud Mode
+- `GROQ_API_KEY` for LLaMA 3.3 70B recommendations
+- `CARBON_INTERFACE_API_KEY` for verified external carbon estimates
+- `VITE_FIREBASE_*` for Firebase web authentication configuration
+- `backend/serviceAccountKey.json` for Firestore Admin access
 
-- Firebase Authentication with Email/Password enabled.
-- Firestore Database.
-- Firebase Admin SDK service account at `Project Files/backend/serviceAccountKey.json`.
-- Groq API key for AI recommendations.
-- Carbon Interface API key for external carbon estimates.
+## Firebase Database And Authentication
 
-The app can still run locally without all external keys. Missing Firebase web credentials use the in-app account flow, missing Firebase Admin credentials use SQLite backend storage, and missing Groq credentials use built-in fallback recommendations.
+1. Open Firebase Console and create a project.
+2. Go to Authentication, enable the Email/Password provider.
+3. Go to Firestore Database, create a database, and start in production mode.
+4. Publish the security rules from `firestore.rules`.
+5. Copy the Firebase web app keys into `frontend/.env`.
+6. Download a Firebase Admin SDK service account JSON and save it as `backend/serviceAccountKey.json`.
+7. Start Flask with `python app.py`, then start React with `npm run dev`.
+
+EcoTrack stores data in these Firestore paths:
+
+- `users/{userId}` for profile and daily budget settings
+- `logs/{userId}/daily/{date}` for preserved daily carbon logs
+- `badges/{userId}` for achievement progress
+
+## Realtime Behavior
+
+- The frontend signs users in with Firebase Email/Password Authentication.
+- Firestore `onSnapshot` listeners stream log history, budget settings, and badges into the dashboard.
+- The Flask API verifies Firebase ID tokens before storing or returning user records.
+- The Flask API remains responsible for carbon calculation, AI recommendation calls, Carbon Interface integration, and server-side Firestore writes.
+
+## Build For Deployment
+
+```bash
+cd frontend
+npm run build
+```
+
+Deploy `frontend/dist` to a static host such as Firebase Hosting, Netlify, or Vercel. Deploy the Flask backend to a Python host such as Render, Railway, Fly.io, or Google Cloud Run, then set `VITE_BACKEND_URL` to the deployed API URL.
